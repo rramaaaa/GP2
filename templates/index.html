@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>كاشف الأخبار المزيفة</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:        #0a0b0f;
+  --bg2:       #10121a;
+  --bg3:       #161924;
+  --bg4:       #1c2030;
+  --border:    rgba(255,255,255,.07);
+  --border2:   rgba(255,255,255,.12);
+  --cyan:      #00d4ff;
+  --cyan-dim:  rgba(0,212,255,.1);
+  --green:     #00e676;
+  --green-dim: rgba(0,230,118,.1);
+  --red:       #ff3d57;
+  --red-dim:   rgba(255,61,87,.1);
+  --amber:     #ffab00;
+  --amber-dim: rgba(255,171,0,.1);
+  --t1: #e8eaf2;
+  --t2: #7b82a0;
+  --t3: #3d4460;
+  --r:  16px;
+  --r2: 10px;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans Arabic', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--t1);min-height:100vh;direction:rtl;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse 60% 50% at 80% 0%,rgba(0,212,255,.04) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 10% 90%,rgba(0,230,118,.03) 0%,transparent 70%);}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:58px;border-bottom:1px solid var(--border);background:rgba(10,11,15,.85);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+.nav-left{display:flex;align-items:center;gap:10px}
+.nav-icon{width:30px;height:30px;border-radius:8px;background:var(--cyan-dim);border:1px solid rgba(0,212,255,.25);display:flex;align-items:center;justify-content:center}
+.nav-icon svg{stroke:var(--cyan)}
+.nav-title{font-size:.85rem;font-weight:600;color:var(--t1);letter-spacing:-.01em}
+.nav-right{display:flex;align-items:center;gap:8px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2.5s ease infinite}
+.main{max-width:700px;margin:0 auto;padding:44px 20px 80px}
+.heading{text-align:center;margin-bottom:36px;animation:up .5s ease both}
+.heading h1{font-size:clamp(1.5rem,3.5vw,2.1rem);font-weight:700;letter-spacing:-.03em;margin-bottom:8px}
+.heading h1 em{font-style:normal;color:var(--cyan)}
+.heading p{font-size:.83rem;color:var(--t2);line-height:1.7}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;animation:up .5s ease .08s both}
+.tab{padding:12px 16px;border-radius:var(--r2);background:var(--bg2);border:1px solid var(--border);color:var(--t2);font-family:var(--sans);font-size:.83rem;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .18s ease}
+.tab svg{opacity:.5;transition:opacity .18s}
+.tab.active{background:var(--cyan-dim);border-color:rgba(0,212,255,.3);color:var(--cyan);box-shadow:0 0 20px rgba(0,212,255,.08)}
+.tab.active svg{opacity:1;stroke:var(--cyan)}
+.icard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:24px;animation:up .5s ease .14s both}
+.inp-sec{display:none}
+.inp-sec.show{display:block}
+textarea.field,input.field{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;color:var(--t1);font-family:var(--sans);font-size:.88rem;outline:none;resize:none;transition:border-color .18s,box-shadow .18s;direction:rtl}
+textarea.field{height:130px;line-height:1.7}
+input.field{height:46px;font-family:var(--mono);font-size:.78rem;direction:ltr;text-align:left}
+textarea.field::placeholder,input.field::placeholder{color:var(--t3)}
+textarea.field:focus,input.field:focus{border-color:rgba(0,212,255,.35);box-shadow:0 0 0 3px rgba(0,212,255,.06)}
+.meta-row{display:flex;justify-content:space-between;margin:7px 0 18px}
+.wc-lbl{font-family:var(--mono);font-size:.65rem;color:var(--t3)}
+.err{display:none;align-items:center;gap:8px;background:rgba(255,61,87,.07);border:1px solid rgba(255,61,87,.2);border-radius:var(--r2);padding:10px 14px;color:#ff7b8a;font-size:.78rem;margin-bottom:14px}
+.err.show{display:flex}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{height:44px;border-radius:var(--r2);border:1px solid;font-family:var(--sans);font-size:.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .18s ease}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none !important}
+.btn-a{background:var(--cyan);border-color:var(--cyan);color:#000}
+.btn-a:hover:not(:disabled){background:#33dbff;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,255,.3)}
+.btn-b{background:transparent;border-color:var(--border2);color:var(--t2)}
+.btn-b:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan);transform:translateY(-1px)}
+.loader{display:none;align-items:center;justify-content:center;gap:10px;padding-top:14px}
+.loader.show{display:flex}
+.spin{width:16px;height:16px;border:2px solid var(--bg4);border-top-color:var(--cyan);border-radius:50%;animation:spin .65s linear infinite}
+.loader-txt{font-family:var(--mono);font-size:.68rem;color:var(--t3)}
+.progbar{height:2px;background:var(--bg3);border-radius:2px;overflow:hidden;display:none;margin-top:12px}
+.progbar.show{display:block}
+.progbar-fill{height:100%;width:28%;background:var(--cyan);animation:slide 1.1s ease infinite}
+.results{display:none;flex-direction:column;gap:14px;margin-top:20px;animation:up .45s ease both}
+.results.show{display:flex}
+.new-btn{align-self:flex-start;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--t2);font-family:var(--sans);font-size:.75rem;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .18s}
+.new-btn:hover{color:var(--t1);border-color:var(--border2)}
+.rcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:relative}
+.rcard-glow{position:absolute;top:0;left:0;right:0;height:1px}
+.rcard.real .rcard-glow{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.rcard.fake .rcard-glow{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+.rcard-body{padding:28px;display:flex;align-items:center;gap:28px}
+.ring-wrap{flex-shrink:0;position:relative;width:130px;height:130px}
+.ring-wrap svg{width:130px;height:130px;transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--bg3);stroke-width:8}
+.ring-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)}
+.rcard.real .ring-fill{stroke:var(--green)}
+.rcard.fake .ring-fill{stroke:var(--red)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-family:var(--mono);font-size:1.7rem;font-weight:600;line-height:1}
+.ring-lbl{font-size:.58rem;color:var(--t3);font-family:var(--mono);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px}
+.rcard.real .ring-pct{color:var(--green)}
+.rcard.fake .ring-pct{color:var(--red)}
+.verdict-info{flex:1}
+.verdict-tag{display:inline-flex;align-items:center;gap:6px;font-size:.65rem;font-family:var(--mono);letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:1px solid;margin-bottom:10px}
+.rcard.real .verdict-tag{color:var(--green);border-color:rgba(0,230,118,.3);background:var(--green-dim)}
+.rcard.fake .verdict-tag{color:var(--red);border-color:rgba(255,61,87,.3);background:var(--red-dim)}
+.verdict-main{font-size:1.4rem;font-weight:700;letter-spacing:-.02em;margin-bottom:5px}
+.rcard.real .verdict-main{color:var(--green)}
+.rcard.fake .verdict-main{color:var(--red)}
+.verdict-sub{font-size:.78rem;color:var(--t2);line-height:1.55}
+.mini-rings{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px 20px}
+.mini-ring-item{display:flex;flex-direction:column;align-items:center;gap:10px}
+.mini-ring-wrap{position:relative;width:80px;height:80px}
+.mini-ring-wrap svg{width:80px;height:80px;transform:rotate(-90deg)}
+.mini-ring-bg{fill:none;stroke:var(--bg3);stroke-width:6}
+.mini-ring-fill{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1)}
+.mini-ring-fill.g{stroke:var(--green)}
+.mini-ring-fill.r{stroke:var(--red)}
+.mini-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.mini-pct{font-family:var(--mono);font-size:.95rem;font-weight:600}
+.mini-pct.g{color:var(--green)}
+.mini-pct.r{color:var(--red)}
+.mini-label{font-size:.65rem;color:var(--t2);font-weight:500;text-align:center}
+.mini-code{font-size:.58rem;font-family:var(--mono);letter-spacing:.5px;text-align:center;margin-top:2px}
+.mini-code.g{color:var(--green)}
+.mini-code.r{color:var(--red)}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 14px;text-align:center}
+.stat-lbl{font-family:var(--mono);font-size:.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.stat-val{font-family:var(--mono);font-size:1.25rem;font-weight:500;color:var(--t1)}
+.danger-row{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 22px;display:flex;align-items:center;gap:20px}
+.danger-label-wrap{flex-shrink:0}
+.danger-key{font-family:var(--mono);font-size:.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+.danger-val{font-size:.9rem;font-weight:600;color:var(--t1)}
+.danger-arc{flex:1;display:flex;justify-content:center}
+.explain-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px 22px}
+.sec-label{font-family:var(--mono);font-size:.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.explain-txt{font-size:.84rem;color:var(--t2);line-height:1.85;border-right:2px solid var(--bg4);padding-right:14px}
+@keyframes up   {from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes spin {to{transform:rotate(360deg)}}
+@keyframes slide{from{transform:translateX(-200%)}to{transform:translateX(500%)}}
+@media(max-width:580px){
+  .nav{padding:0 16px}
+  .main{padding:28px 14px 60px}
+  .rcard-body{flex-direction:column;align-items:flex-start;gap:18px}
+  .btns{grid-template-columns:1fr}
+  .mini-ring-wrap{width:64px;height:64px}
+  .mini-ring-wrap svg{width:64px;height:64px}
+  .stats-row{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-left">
+    <div class="nav-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    </div>
+    <span class="nav-title">كاشف الأخبار المزيفة</span>
+  </div>
+  <div class="nav-right">
+    <div class="pulse"></div>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="heading">
+    <h1>تحقق من <em>مصداقية</em> الخبر</h1>
+    <p>أدخل نص الخبر أو رابطه وسيحلل النظام المحتوى فوراً باستخدام نموذج AraBERT للغة العربية</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabTxt" onclick="pick('text')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      إدخال نص
+    </button>
+    <button class="tab" id="tabUrl" onclick="pick('url')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      إدخال رابط
+    </button>
+  </div>
+
+  <div class="icard">
+    <div class="inp-sec show" id="secTxt">
+      <textarea class="field" id="txtIn" placeholder="الصق نص الخبر هنا للتحقق من صحته... (5 كلمات على الأقل)" oninput="wc()"></textarea>
+      <div class="meta-row"><span class="wc-lbl" id="wcMeta">0 كلمة</span></div>
+      <div class="err" id="errTxt">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errTxtMsg"></span>
+      </div>
+    </div>
+    <div class="inp-sec" id="secUrl">
+      <input class="field" id="urlIn" type="url" placeholder="https://example.com/article..."/>
+      <div class="meta-row"><span></span></div>
+      <div class="err" id="errUrl">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errUrlMsg"></span>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="btn btn-a" onclick="run('detail')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        تحليل تفصيلي
+      </button>
+      <button class="btn btn-b" onclick="run('quick')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        تحليل سريع
+      </button>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="spin"></div>
+      <span class="loader-txt">جاري التحليل ...</span>
+    </div>
+    <div class="progbar" id="progbar"><div class="progbar-fill"></div></div>
+  </div>
+
+  <div class="results" id="results">
+    <button class="new-btn" onclick="doReset()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      تحليل جديد
+    </button>
+
+    <div class="rcard" id="rcard">
+      <div class="rcard-glow"></div>
+      <div class="rcard-body">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg">
+            <circle class="ring-bg"   cx="65" cy="65" r="52"/>
+            <circle class="ring-fill" cx="65" cy="65" r="52" id="ringFill"
+              stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+          </svg>
+          <div class="ring-center">
+            <span class="ring-pct" id="ringPct">—</span>
+            <span class="ring-lbl">ثقة</span>
+          </div>
+        </div>
+        <div class="verdict-info">
+          <div class="verdict-tag"  id="verdictTag"></div>
+          <div class="verdict-main" id="verdictMain"></div>
+          <div class="verdict-sub"  id="verdictSub"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="detWrap" style="display:none;flex-direction:column;gap:14px">
+      <!-- Two mini rings: Real + Fake only (no UNC — matches Colab) -->
+      <div class="mini-rings">
+        <div class="mini-ring-item">
+          <div class="mini-ring-wrap">
+            <svg viewBox="0 0 80 80"><circle class="mini-ring-bg" cx="40" cy="40" r="32"/><circle class="mini-ring-fill g" cx="40" cy="40" r="32" id="mfReal" stroke-dasharray="201.1" stroke-dashoffset="201.1"/></svg>
+            <div class="mini-center"><span class="mini-pct g" id="mpReal">—</span></div>
+          </div>
+          <div class="mini-label">خبر حقيقي</div>
+          <div class="mini-code g">REAL</div>
+        </div>
+        <div class="mini-ring-item">
+          <div class="mini-ring-wrap">
+            <svg viewBox="0 0 80 80"><circle class="mini-ring-bg" cx="40" cy="40" r="32"/><circle class="mini-ring-fill r" cx="40" cy="40" r="32" id="mfFake" stroke-dasharray="201.1" stroke-dashoffset="201.1"/></svg>
+            <div class="mini-center"><span class="mini-pct r" id="mpFake">—</span></div>
+          </div>
+          <div class="mini-label">خبر مزيف</div>
+          <div class="mini-code r">FAKE</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-lbl">احتمال حقيقي</div>
+          <div class="stat-val" id="sReal" style="color:var(--green)"></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-lbl">احتمال مزيف</div>
+          <div class="stat-val" id="sFake" style="color:var(--red)"></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-lbl">عدد الكلمات</div>
+          <div class="stat-val" id="sWords"></div>
+        </div>
+      </div>
+
+      <div class="danger-row">
+        <div class="danger-label-wrap">
+          <div class="danger-key">مستوى الخطورة</div>
+          <div class="danger-val" id="dangerVal"></div>
+        </div>
+        <div class="danger-arc">
+          <!-- center(90,92) r=68, CW short arc 210°→330° (large-arc=0,sweep=1), arc-len=142.4 -->
+          <svg width="190" height="100" viewBox="0 0 190 100">
+            <!-- track -->
+            <path d="M31,58 A68,68 0 0 1 149,58" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="9" stroke-linecap="round"/>
+            <!-- fill: dasharray=142.4, dashoffset animated by JS -->
+            <path id="dangerArcFill" d="M31,58 A68,68 0 0 1 149,58"
+              fill="none" stroke="var(--green)" stroke-width="9" stroke-linecap="round"
+              stroke-dasharray="142.4" stroke-dashoffset="142.4"
+              style="transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)"/>
+            <!-- tick marks (outer→inner) -->
+            <line x1="31" y1="58" x2="41" y2="63" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="56" y1="33" x2="61" y2="43" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="90" y1="24" x2="90" y2="35" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="124" y1="33" x2="118" y2="43" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="149" y1="58" x2="139" y2="63" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/>
+            <!-- labels outside arc -->
+            <text x="18"  y="54" fill="var(--t3)" font-size="9" font-family="monospace" text-anchor="middle">1</text>
+            <text x="48"  y="23" fill="var(--t3)" font-size="9" font-family="monospace" text-anchor="middle">2</text>
+            <text x="90"  y="12" fill="var(--t3)" font-size="9" font-family="monospace" text-anchor="middle">3</text>
+            <text x="132" y="23" fill="var(--t3)" font-size="9" font-family="monospace" text-anchor="middle">4</text>
+            <text x="162" y="54" fill="var(--t3)" font-size="9" font-family="monospace" text-anchor="middle">5</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="explain-box">
+        <div class="sec-label">شرح النتيجة</div>
+        <p class="explain-txt" id="explainTxt"></p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+var mode = 'text';
+var API_BASE = 'http://localhost:5000';
+
+function pick(m) {
+  mode = m;
+  document.getElementById('tabTxt').classList.toggle('active', m==='text');
+  document.getElementById('tabUrl').classList.toggle('active', m==='url');
+  document.getElementById('secTxt').classList.toggle('show', m==='text');
+  document.getElementById('secUrl').classList.toggle('show', m==='url');
+  clearResult(); clearErrors();
+}
+
+function wc() {
+  var v = document.getElementById('txtIn').value.trim();
+  var n = v ? v.split(/\s+/).filter(Boolean).length : 0;
+  document.getElementById('wcMeta').textContent = n + ' كلمة';
+}
+
+function validate() {
+  clearErrors();
+  if (mode==='text') {
+    var txt = document.getElementById('txtIn').value.trim();
+    if (!txt) { showErr('errTxt','errTxtMsg','يرجاء إدخال نص الخبر أولاً.'); return false; }
+    if (txt.split(/\s+/).filter(Boolean).length < 5) { showErr('errTxt','errTxtMsg','النص قصير جداً. الحد الأدنى 5 كلمات.'); return false; }
+  } else {
+    var url = document.getElementById('urlIn').value.trim();
+    if (!url) { showErr('errUrl','errUrlMsg','يرجاء إدخال رابط المقال.'); return false; }
+    if (!/^https?:\/\/.+\..+/.test(url)) { showErr('errUrl','errUrlMsg','يرجاء إدخال رابط صحيح يبدأ بـ https://'); return false; }
+  }
+  return true;
+}
+function showErr(b,m,msg){ document.getElementById(b).classList.add('show'); document.getElementById(m).textContent=msg; }
+function clearErrors(){ document.getElementById('errTxt').classList.remove('show'); document.getElementById('errUrl').classList.remove('show'); }
+
+function setLoading(on) {
+  document.getElementById('loader').classList.toggle('show', on);
+  document.getElementById('progbar').classList.toggle('show', on);
+  document.querySelectorAll('.btn').forEach(function(b){ b.disabled=on; });
+}
+
+async function run(type) {
+  if (!validate()) return;
+  clearResult(); setLoading(true);
+  try {
+    var endpoint = API_BASE + (mode==='text' ? '/api/predict/text' : '/api/predict/url');
+    var payload  = mode==='text'
+      ? {body: document.getElementById('txtIn').value.trim()}
+      : {url:  document.getElementById('urlIn').value.trim()};
+    var res = await fetch(endpoint, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var raw = await res.json();
+    if (raw.error) {
+      showErr(mode==='text'?'errTxt':'errUrl', mode==='text'?'errTxtMsg':'errUrlMsg', raw.error);
+      setLoading(false); return;
+    }
+    setLoading(false);
+    render(mapResp(raw), type);
+  } catch(e) {
+    showErr(mode==='text'?'errTxt':'errUrl', mode==='text'?'errTxtMsg':'errUrlMsg',
+      'تعذّر الاتصال بالخادم. تأكد من تشغيل Flask على ' + API_BASE);
+    setLoading(false);
+  }
+}
+
+function mapResp(raw) {
+  // ── server returns label: "real" | "fake" (no "unc" anymore) ──
+  var pred  = raw.label;  // "real" or "fake"
+
+  // confidence is already 0-1 from server → multiply by 100
+  var conf  = Math.round(raw.confidence * 100);
+
+  // prob_real and prob_fake are 0-1 floats
+  var pReal = Math.round(raw.prob_real * 100);
+  var pFake = Math.round(raw.prob_fake * 100);
+
+  var labels   = {real:'خبر حقيقي', fake:'خبر مزيف'};
+  var tags     = {real:'REAL · حقيقي', fake:'FAKE · مزيف'};
+  var subs     = {
+    real: 'المحتوى يبدو موثوقاً وفق التحليل',
+    fake: 'يحتوي على مؤشرات تضليل واضحة'
+  };
+  var explains = {
+    real: 'النص يحتوي على مؤشرات لغوية تتسق مع الأخبار الموثوقة: أسلوب موضوعي، معلومات قابلة للتحقق، وخلو من العبارات التحريضية.',
+    fake: 'رصد النموذج أنماطاً لغوية مرتبطة بالتضليل: مبالغة في الوصف، غياب المصادر الموثوقة، وعبارات عاطفية مثيرة. يُنصح بالتحقق قبل المشاركة.'
+  };
+
+  return {
+    pred, conf, pReal, pFake,
+    wds:     raw.word_count,
+    danger:  {lbl: raw.danger_lbl, steps: raw.danger_steps},
+    label:   labels[pred]   || pred,
+    tag:     tags[pred]     || pred,
+    sub:     subs[pred]     || '',
+    explain: explains[pred] || ''
+  };
+}
+
+function render(d, type) {
+  var rcard = document.getElementById('rcard');
+  rcard.className = 'rcard ' + d.pred;   // "rcard real" or "rcard fake"
+
+  var fill  = document.getElementById('ringFill');
+  var circ  = 326.7;
+  fill.style.transition       = 'none';
+  fill.style.strokeDashoffset = circ;
+
+  document.getElementById('ringPct').textContent    = d.conf + '%';
+  document.getElementById('verdictTag').textContent  = d.tag;
+  document.getElementById('verdictMain').textContent = d.label;
+  document.getElementById('verdictSub').textContent  = d.sub;
+
+  setTimeout(function(){
+    fill.style.transition       = 'stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)';
+    fill.style.strokeDashoffset = circ - (d.conf / 100) * circ;
+  }, 80);
+
+  var dw = document.getElementById('detWrap');
+  if (type === 'detail') {
+    dw.style.display = 'flex';
+    var mcirc = 201.1;
+
+    ['mfReal','mfFake'].forEach(function(id){
+      var el = document.getElementById(id);
+      el.style.transition       = 'none';
+      el.style.strokeDashoffset = mcirc;
+    });
+
+    document.getElementById('mpReal').textContent = d.pReal + '%';
+    document.getElementById('mpFake').textContent = d.pFake + '%';
+
+    setTimeout(function(){
+      ['mfReal','mfFake'].forEach(function(id){
+        document.getElementById(id).style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1)';
+      });
+      document.getElementById('mfReal').style.strokeDashoffset = mcirc - (d.pReal/100)*mcirc;
+      document.getElementById('mfFake').style.strokeDashoffset = mcirc - (d.pFake/100)*mcirc;
+    }, 120);
+
+    document.getElementById('sReal').textContent  = d.pReal + '%';
+    document.getElementById('sFake').textContent  = d.pFake + '%';
+    document.getElementById('sWords').textContent = d.wds;
+
+    var arc      = document.getElementById('dangerArcFill');
+    var dCls     = d.danger.steps <= 2 ? 'lo' : d.danger.steps === 3 ? 'me' : 'hi';
+    var arcColors= {lo:'var(--green)', me:'var(--amber)', hi:'var(--red)'};
+    arc.setAttribute('stroke', arcColors[dCls] || 'var(--green)');
+    arc.style.transition = 'none';
+    arc.style.strokeDashoffset = 142.4;
+    document.getElementById('dangerVal').textContent = d.danger.lbl;
+    // arc-len=142.4, offset=142.4*(1-steps/5): step1=113.9 step2=85.5 step3=57 step4=28.5 step5=0
+    setTimeout(function(){
+      arc.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)';
+      arc.style.strokeDashoffset = 142.4 * (1 - d.danger.steps / 5);
+    }, 150);
+
+    document.getElementById('explainTxt').textContent = d.explain;
+  } else {
+    dw.style.display = 'none';
+  }
+
+  var el = document.getElementById('results');
+  el.classList.add('show');
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function clearResult(){ document.getElementById('results').classList.remove('show'); }
+function doReset(){
+  clearResult(); clearErrors();
+  document.getElementById('txtIn').value = '';
+  document.getElementById('urlIn').value = '';
+  wc();
+}
+</script>
+</body>
+</html>
