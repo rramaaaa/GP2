@@ -1,7 +1,4 @@
-# ============================================================
-#  AFND — Arabic Fake News Detector  |  Flask Backend
-#  app.py  — matches Colab training script exactly (no margin/unc logic)
-# ============================================================
+
 
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
@@ -34,9 +31,6 @@ device   = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 USE_FP16 = torch.cuda.is_available()
 
 
-# ════════════════════════════════════════════════════════════
-#  MODEL ARCHITECTURE
-# ════════════════════════════════════════════════════════════
 
 class AttentionPooling(nn.Module):
     def __init__(self, hidden_size):
@@ -81,9 +75,6 @@ class FakeNewsDetector(nn.Module):
         return self.classifier(x)
 
 
-# ════════════════════════════════════════════════════════════
-#  TEXT CLEANING
-# ════════════════════════════════════════════════════════════
 
 _URL_RE      = re.compile(r"https?://\S+|www\.\S+")
 _EMAIL_RE    = re.compile(r"\S+@\S+\.\S+")
@@ -122,9 +113,6 @@ def preprocess_arabic(title: str, body: str) -> tuple:
     return title_c, body_c, combined
 
 
-# ════════════════════════════════════════════════════════════
-#  LOAD MODEL
-# ════════════════════════════════════════════════════════════
 
 print(f"\n{'='*55}")
 print("  AFND — Loading model…")
@@ -145,9 +133,6 @@ model.eval()
 print("\n✓ Model ready.\n")
 
 
-# ════════════════════════════════════════════════════════════
-#  PREDICTION — identical to Colab training script
-# ════════════════════════════════════════════════════════════
 
 def predict(title: str, body: str = "", threshold_real: float = THRESHOLD_REAL) -> dict:
 
@@ -186,16 +171,14 @@ def predict(title: str, body: str = "", threshold_real: float = THRESHOLD_REAL) 
 
         probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
 
-    # ── Exact match to Colab lines 794-798 ───────────────────
     prob_fake  = float(probs[0])          # index 0 = FAKE
     prob_real  = float(probs[1])          # index 1 = REAL
     pred       = 1 if prob_real >= threshold_real else 0
     confidence = prob_real if pred == 1 else prob_fake
 
-    # ── label: only "real" or "fake" — matches Colab exactly ─
     label = "real" if pred == 1 else "fake"
 
-    # ── Danger level ─────────────────────────────────────────
+
     if label == "real" and confidence >= 0.85:
         danger_lbl, danger_steps = "منخفض جداً", 1
     elif label == "real":
@@ -222,9 +205,6 @@ def predict(title: str, body: str = "", threshold_real: float = THRESHOLD_REAL) 
     }
 
 
-# ════════════════════════════════════════════════════════════
-#  ROUTES
-# ════════════════════════════════════════════════════════════
 
 @app.route("/")
 def home():
@@ -240,10 +220,6 @@ def predict_text():
     if not raw_text:
         return jsonify({"error": "الرجاء إرسال نص في حقل 'body'."}), 400
 
-    # ── CRITICAL: pass as title="" body=text is WRONG ──────────
-    # Colab always calls predict(title=news, body="")
-    # so the text goes into segment A of the BERT tokenizer.
-    # Passing as body puts it in segment B → different token_type_ids → wrong output.
     result = predict(title=raw_text, body="", threshold_real=threshold_real)
     return jsonify(result)
 
@@ -276,11 +252,9 @@ def predict_url():
         title = title.get_text(strip=True) if title else ""
         body  = " ".join(p.get_text(strip=True) for p in soup.find_all("p"))
 
-        # Combine title + body into a single string, then pass as title only (body="")
-        # This matches Colab exactly: predict(title=text, body="")
-        # Passing body separately puts it in BERT segment B → wrong token_type_ids → wrong output
+
         combined_text = f"{title} {body}".strip()
-        combined_text = " ".join(combined_text.split()[:MAX_WORDS])  # respect MAX_WORDS limit
+        combined_text = " ".join(combined_text.split()[:MAX_WORDS]) 
 
         if len(combined_text.split()) < MIN_WORDS:
             return jsonify({"error": "لم يتم استخراج نص كافٍ من الرابط. جرّب لصق النص مباشرةً."}), 422
